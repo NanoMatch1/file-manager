@@ -1,44 +1,38 @@
-import argparse
-import sys
+# file_manager/cli.py
 
-from file_manager import common_tools
-from file_manager import maria_tools
-from file_manager import temp_profile_tools
+import typer
+from file_manager import common_tools, maria_tools, temp_profile_tools
 
-def main():
-    parser = argparse.ArgumentParser(description='File Manager CLI Tools')
-    subparsers = parser.add_subparsers(dest='command')
+app = typer.Typer(help="File Manager CLI: rename, move, preprocess files easily.")
 
-    # --- Common tools ---
-    move_parser = subparsers.add_parser('move-files', help='Move files into folders A/B/C')
-    move_parser.add_argument('filepath', type=str)
+@app.command()
+def move_files(filepath: str):
+    """
+    Move files into subfolders A/B/C based on suffix in filename.
+    """
+    common_tools.move_files_by_suffix(filepath)
 
-    rename_parser = subparsers.add_parser('rename-files', help='Rename files')
-    rename_parser.add_argument('filepath', type=str)
-    rename_parser.add_argument('oldKey', type=str)
-    rename_parser.add_argument('newKey', type=str)
+@app.command()
+def rename_files(filepath: str, oldkey: str, newkey: str):
+    """
+    Rename files inside a directory, replacing oldkey with newkey.
+    """
+    common_tools.rename_files(filepath, oldkey, newkey)
 
-    # --- Maria-specific pipeline ---
-    maria_parser = subparsers.add_parser('maria-preprocess', help='Preprocess Maria files')
-    maria_parser.add_argument('filepath', type=str)
+@app.command()
+def maria_preprocess(filepath: str):
+    """
+    Full preprocessing pipeline for Maria's data.
+    Moves, renames, pads, and edits files with Maria-specific settings.
+    """
+    maria_tools.preprocess_maria_files(filepath)
 
-    # --- Temp-profile-specific pipeline ---
-    temp_parser = subparsers.add_parser('temp-preprocess', help='Preprocess Temp Profile files')
-    temp_parser.add_argument('filepath', type=str)
+@app.command()
+def temp_preprocess(filepath: str):
+    """
+    Full preprocessing pipeline for Temperature Profile experiments.
+    """
+    temp_profile_tools.preprocess_temp_profile_files(filepath)
 
-    args = parser.parse_args()
-
-    if args.command == 'move-files':
-        common_tools.move_files_by_suffix(args.filepath)
-    elif args.command == 'rename-files':
-        common_tools.rename_files(args.filepath, args.oldKey, args.newKey)
-    elif args.command == 'maria-preprocess':
-        maria_tools.preprocess_maria_files(args.filepath)
-    elif args.command == 'temp-preprocess':
-        temp_profile_tools.preprocess_temp_profile_files(args.filepath)
-    else:
-        parser.print_help()
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    app()
