@@ -1,41 +1,41 @@
-# file_manager/cli.py
 import argparse
 import sys
-from file_manager import (
-    preprocess_maria_files,
-    move_files_by_suffix,
-    rename_files,
-    rename_files_basename,
-    pad_file_indices,
-    load_edit_and_save_files,
-)
+
+from file_manager import common_tools
+from file_manager import maria_tools
+from file_manager import temp_profile_tools
 
 def main():
     parser = argparse.ArgumentParser(description='File Manager CLI Tools')
     subparsers = parser.add_subparsers(dest='command')
 
-    # Preprocess
-    preprocess_parser = subparsers.add_parser('preprocess', help='Run full preprocessing pipeline')
-    preprocess_parser.add_argument('filepath', type=str, help='Path to the data directory')
+    # --- Common tools ---
+    move_parser = subparsers.add_parser('move-files', help='Move files into folders A/B/C')
+    move_parser.add_argument('filepath', type=str)
 
-    # Move files
-    move_parser = subparsers.add_parser('move-files', help='Move files into A, B, C folders')
-    move_parser.add_argument('filepath', type=str, help='Path to the data directory')
-
-    # Rename files
     rename_parser = subparsers.add_parser('rename-files', help='Rename files')
-    rename_parser.add_argument('filepath', type=str, help='Path to the data directory')
-    rename_parser.add_argument('oldKey', type=str, help='Old key to replace')
-    rename_parser.add_argument('newKey', type=str, help='New key to insert')
+    rename_parser.add_argument('filepath', type=str)
+    rename_parser.add_argument('oldKey', type=str)
+    rename_parser.add_argument('newKey', type=str)
+
+    # --- Maria-specific pipeline ---
+    maria_parser = subparsers.add_parser('maria-preprocess', help='Preprocess Maria files')
+    maria_parser.add_argument('filepath', type=str)
+
+    # --- Temp-profile-specific pipeline ---
+    temp_parser = subparsers.add_parser('temp-preprocess', help='Preprocess Temp Profile files')
+    temp_parser.add_argument('filepath', type=str)
 
     args = parser.parse_args()
 
-    if args.command == 'preprocess':
-        preprocess_maria_files(args.filepath)
-    elif args.command == 'move-files':
-        move_files_by_suffix(args.filepath)
+    if args.command == 'move-files':
+        common_tools.move_files_by_suffix(args.filepath)
     elif args.command == 'rename-files':
-        rename_files(args.filepath, args.oldKey, args.newKey)
+        common_tools.rename_files(args.filepath, args.oldKey, args.newKey)
+    elif args.command == 'maria-preprocess':
+        maria_tools.preprocess_maria_files(args.filepath)
+    elif args.command == 'temp-preprocess':
+        temp_profile_tools.preprocess_temp_profile_files(args.filepath)
     else:
         parser.print_help()
         sys.exit(1)

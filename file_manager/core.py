@@ -1,115 +1,158 @@
 import os
-import json
 
-def list_folders(directory):
-    return [f for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]
+def rename_basename(fileDir, newKey):
+    '''takes the first part of the file and renames'''
 
-def list_files(directory, extension=None):
-    if extension:
-        return [f for f in os.listdir(directory) if f.lower().endswith(extension.lower())]
-    return [f for f in os.listdir(directory)]
+    folders = [file for file in os.listdir(fileDir)]
 
-# -- File renaming utilities --
-
-def rename_files_basename(fileDir, newKey):
-    folders = list_folders(fileDir)
     for folder in folders:
         workingDir = os.path.join(fileDir, folder)
-        files = list_files(workingDir)
-        for file in files:
-            parts = file.split('_')[1:]
-            new_name = '_'.join([newKey, *parts])
-            os.rename(os.path.join(workingDir, file), os.path.join(workingDir, new_name))
-        print(f'{len(files)} files renamed in {workingDir}.')
+        fileList = [file for file in os.listdir(workingDir)]
+        for file in fileList:
+            nameData = file.split('_')[1:]
+            newFile = '_'.join([newKey, *nameData])
+            os.rename(os.path.join(workingDir, file), os.path.join(workingDir, newFile))
+        
+        print(f'{len(fileList)} files renamed in {workingDir}.')
+        
 
-def pad_file_indices(fileDir, padLength=3, padChar='0'):
-    folders = list_folders(fileDir)
+def pad_files(fileDir, padLength: 3, padChar: str):
+    '''pad files in dir to padLength with padChar'''
+
+    folders = [file for file in os.listdir(fileDir) if os.path.isdir(os.path.join(fileDir, file))]
+
+
     for folder in folders:
-        workingDir = os.path.join(fileDir, folder)
-        pad_files_in_directory(workingDir, padLength, padChar)
-    pad_files_in_directory(fileDir, padLength, padChar, root_only=True)
+        try:
+            workingDir = os.path.join(fileDir, folder)
+            # breakpoint()
+            fileList = [file for file in os.listdir(workingDir) if file.lower().endswith('.txt')]  
+            # breakpoint() 
+            for file in fileList:
+                index = file.split('_')[1]
+                newIndex = index.rjust(padLength, padChar)
+                newFile = file.replace(index, newIndex)
+                # breakpoint()
+                os.rename(os.path.join(workingDir, file), os.path.join(workingDir, newFile))
+        except Exception as e:
+            print(e)
+            print("broke at folder level")
+        
+        print(f'{len(fileList)} files renamed in {workingDir}.')
 
-def pad_files_in_directory(directory, padLength, padChar, root_only=False):
-    files = list_files(directory, extension='.txt')
-    if files:
+    files = [file for file in os.listdir(fileDir) if file.lower().endswith('.txt')]
+    if len(files) > 0:
         for file in files:
-            parts = file.split('_')
-            if len(parts) > 1:
-                index = parts[1]
-                new_index = index.rjust(padLength, padChar)
-                new_file = file.replace(index, new_index)
-                os.rename(os.path.join(directory, file), os.path.join(directory, new_file))
-        print(f'{len(files)} files renamed in {directory}.')
+            index = file.split('_')[1]
+            newIndex = index.rjust(padLength, padChar)
+            newFile = file.replace(index, newIndex)
+            os.rename(os.path.join(fileDir, file), os.path.join(fileDir, newFile))
+
+        print("found files in root directory. Renamed those too.")
 
 
-def rename_files(fileDir, oldKey, newKey, extension='.txt'):
-    files = list_files(fileDir, extension)
-    if files:
-        for file in files:
-            new_name = file.replace(oldKey, newKey)
-            os.rename(os.path.join(fileDir, file), os.path.join(fileDir, new_name))
-        print(f'{len(files)} files renamed in {fileDir}.')
+def rename_files(fileDir, oldKey: str, newKey: str, extension='.txt'):
+    '''rename files in dir that contain oldKey. Replaces oldKey with newKey in the filename.'''
+
+    files_in_dir = [file for file in os.listdir(fileDir) if file.lower().endswith(extension)]
+    if len(files_in_dir) > 0:
+
+        for file in files_in_dir:
+            newFile = file.replace(oldKey, newKey)
+            os.rename(os.path.join(fileDir, file), os.path.join(fileDir, newFile))
+        
+        print(f'{len(files_in_dir)} files renamed in {fileDir}.')
+    
     else:
-        folders = list_folders(fileDir)
+        folders = [file for file in os.listdir(fileDir)]
+        if oldKey is not None:
+            oldKeyList = [oldKey]*len(folders)
+        else:
+            oldKeyList = [x for x in folders]
+        if newKey is not None:
+            newKeyList = [newKey]*len(folders)
+        else:
+            newKeyList = [str(x+1) for x in range(len(folders))]
+
         for idx, folder in enumerate(folders):
             workingDir = os.path.join(fileDir, folder)
-            files = list_files(workingDir)
-            for file in files:
-                new_name = file.replace(oldKey, newKey)
-                os.rename(os.path.join(workingDir, file), os.path.join(workingDir, new_name))
-            print(f'{len(files)} files renamed in {workingDir}.')
+            fileList = [file for file in os.listdir(workingDir)]
+            for file in fileList:
+                newFile = file.replace(oldKeyList[idx], newKeyList[idx])
+                os.rename(os.path.join(workingDir, file), os.path.join(workingDir, newFile))
+            
+            print(f'{len(fileList)} files renamed in {workingDir}.')
+        
+        print(f'{len(folders)} folders renamed in {fileDir}.')
+        # breakpoint()
 
-# -- File moving utilities --
+def move_files_ABC(filepath):
+    Afiles = [file for file in os.listdir(filepath) if '_A' in file]
+    Bfiles = [file for file in os.listdir(filepath) if '_B' in file]
+    Cfiles = [file for file in os.listdir(filepath) if '_C' in file]
 
-def move_files_by_suffix(filepath, suffixes=('A', 'B', 'C')):
-    for suffix in suffixes:
-        target_dir = os.path.join(filepath, suffix)
-        os.makedirs(target_dir, exist_ok=True)
-        matching_files = [f for f in os.listdir(filepath) if f'_{suffix}' in f]
-        for file in matching_files:
-            os.rename(os.path.join(filepath, file), os.path.join(target_dir, file))
+    if not os.path.exists(os.path.join(filepath, 'A')):
+        os.makedirs(os.path.join(filepath, 'A'))
+    if not os.path.exists(os.path.join(filepath, 'B')):
+        os.makedirs(os.path.join(filepath, 'B'))
+    if not os.path.exists(os.path.join(filepath, 'C')):
+        os.makedirs(os.path.join(filepath, 'C'))
 
-# -- Data loading and editing --
+    for file in Afiles:
+        os.rename(os.path.join(filepath, file), os.path.join(filepath, 'A', file))
+    
+    for file in Bfiles:
+        os.rename(os.path.join(filepath, file), os.path.join(filepath, 'B', file))
+    
+    for file in Cfiles:
+        os.rename(os.path.join(filepath, file), os.path.join(filepath, 'C', file))
 
-def add_header(data, header):
-    if header:
-        return [header] + data
+def add_header(data, header=None):
+    '''add a header to the data'''
+    if header is not None:
+        data.insert(0, header)
     return data
 
-def load_edit_and_save_files(filepath, header=None):
-    export_dir = os.path.join(filepath, 'edited')
-    os.makedirs(export_dir, exist_ok=True)
-    folders = list_folders(filepath)
+def load_and_edit_files(filepath, header=None):
+    '''load the files, slice the data and remove the first column'''
+    exportDir = os.path.join(filepath, 'edited')
+    if not os.path.exists(exportDir):
+        os.makedirs(exportDir)
+    folders = [file for file in os.listdir(filepath)]
 
     for folder in folders:
-        working_dir = os.path.join(filepath, folder)
-        export_folder = os.path.join(export_dir, folder)
-        os.makedirs(export_folder, exist_ok=True)
+        if not os.path.exists(os.path.join(exportDir, folder)):
+            os.makedirs(os.path.join(exportDir, folder))
 
-        files = list_files(working_dir, extension='.txt')
-        for file in files:
-            with open(os.path.join(working_dir, file), 'r') as f:
-                lines = f.readlines()
+        workingDir = os.path.join(filepath, folder)
+        fileList = [file for file in os.listdir(workingDir) if file.lower().endswith('.txt')]   
 
-            data = [line.strip('\n').split(',')[1:] for line in lines if line.strip()]
-            data = add_header(data, header)
+        for file in fileList:
+            with open(os.path.join(workingDir, file), 'r') as f:
+                data = f.readlines()
+            
+            newData = []
+            newData = [x.strip('\n').split(',') for x in data if x != '\n']
 
-            with open(os.path.join(export_folder, file), 'w') as f:
-                for row in data:
-                    f.write(','.join(row) + '\n')
+            newData = [x[1:] for x in newData]
 
-            print(f'{file} edited and saved to {export_folder}.')
+            if header is not None:
+                newData = add_header(newData, header)
 
-# -- Configuration (placeholder) --
+            with open(os.path.join(exportDir, folder, file), 'w') as f:
+                for line in newData:
+                    f.write(','.join(line) + '\n')
+            
+            print(f'{file} edited in {exportDir}.')
 
 def config_json(filepath):
-    # To be implemented
+    '''Creates a json file storing the details of the data structure'''
+    import json
     pass
 
-# -- Processing pipelines --
+def preprocess_maria_files(filepath):
+    move_files_ABC(filepath)
+    rename_basename(filepath, 'LnNP')
+    pad_files(filepath, 3, '0')
+    load_and_edit_files(filepath, header=['data_type', 'maria'])
 
-def preprocess_files(filepath):
-    move_files_by_suffix(filepath)
-    rename_files_basename(filepath, newKey='LnNP')
-    pad_file_indices(filepath, padLength=3, padChar='0')
-    load_edit_and_save_files(filepath, header=['data_type', 'maria'])
