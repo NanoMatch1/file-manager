@@ -1,44 +1,55 @@
+from __future__ import annotations
+
 import argparse
 import sys
 
-from file_manager import common_tools
-from file_manager import maria_tools
-from file_manager import temp_profile_tools
+from . import commands
+from .registry import list_tools
+from .scripts import load_scripts
 
-def main():
-    parser = argparse.ArgumentParser(description='File Manager CLI Tools')
-    subparsers = parser.add_subparsers(dest='command')
 
-    # --- Common tools ---
-    move_parser = subparsers.add_parser('move-files', help='Move files into folders A/B/C')
-    move_parser.add_argument('filepath', type=str)
+def _build_parser() -> argparse.ArgumentParser:
+    load_scripts()
 
-    rename_parser = subparsers.add_parser('rename-files', help='Rename files')
-    rename_parser.add_argument('filepath', type=str)
-    rename_parser.add_argument('oldKey', type=str)
-    rename_parser.add_argument('newKey', type=str)
+    parser = argparse.ArgumentParser(
+        prog="python-tools-cli",
+        description="Registry-driven file processing CLI.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # --- Maria-specific pipeline ---
-    maria_parser = subparsers.add_parser('maria-preprocess', help='Preprocess Maria files')
-    maria_parser.add_argument('filepath', type=str)
+    list_parser = subparsers.add_parser("list-tools", help="List available core tools and scripts.")
+    list_parser.set_defaults(_runner=_list_tools)
 
-    # --- Temp-profile-specific pipeline ---
-    temp_parser = subparsers.add_parser('temp-preprocess', help='Preprocess Temp Profile files')
-    temp_parser.add_argument('filepath', type=str)
+    for spec in list_tools():
+        cmd_parser = subparsers.add_parser(spec.name, help=spec.description, description=spec.description)
+        spec.add_arguments(cmd_parser)
+        cmd_parser.set_defaults(_runner=spec.run)
 
+    return parser
+
+
+def _list_tools(_: argparse.Namespace) -> int:
+    grouped: dict[str, list[tuple[str, str]]] = {}
+    for spec in list_tools():
+        grouped.setdefault(spec.category, []).append((spec.name, spec.description))
+
+    for category in sorted(grouped):
+        print(f"{category}:")
+        for name, description in grouped[category]:
+            print(f"  {name:<24} {description}")
+        print()
+    return 0
+
+
+def main() -> int:
+    parser = _build_parser()
     args = parser.parse_args()
-
-    if args.command == 'move-files':
-        common_tools.move_files_by_suffix(args.filepath)
-    elif args.command == 'rename-files':
-        common_tools.rename_files(args.filepath, args.oldKey, args.newKey)
-    elif args.command == 'maria-preprocess':
-        maria_tools.preprocess_maria_files(args.filepath)
-    elif args.command == 'temp-preprocess':
-        temp_profile_tools.preprocess_temp_profile_files(args.filepath)
-    else:
+    runner = getattr(args, "_runner", None)
+    if runner is None:
         parser.print_help()
-        sys.exit(1)
+        return 1
+    return runner(args)
 
-if __name__ == '__main__':
-    main()
+
+if __name__ == "__main__":
+    sys.exit(main())
